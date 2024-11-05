@@ -2,16 +2,19 @@
   "name": "nodejs-for-devops",
   "version": "1.0.0",
   "description": "This is a simple NodeJS project for DevOps course",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "test": "jest",
-    "build": "echo 'building the app'",
-    "lint": "eslint src/ --fix"
+    "test:src": "jest test_src",
+    "test:dist": "jest test_dist",
+    "build": "node build.js",
+    "start": "node dist/index.js",
+    "lint": "eslint src/ test/ --fix"
   },
   "author": "Zsombor Medgyesi",
   "license": "ISC",
   "dependencies": {
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "terser": "^5.36.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.14.0",

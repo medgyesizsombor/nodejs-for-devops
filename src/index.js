@@ -1,21 +1,63 @@
 // src/index.js
+const http = require('http');
+const url = require('url');
 const { isNumberPrime } = require('./prime');
 
-// Get command-line arguments
-const args = process.argv.slice(2); // The first two arguments are node path and the script path, so we ignore them
+const PORT = process.env.PORT || 3000;
 
-if (args.length !== 1) {
-  console.error('Please provide exactly 1 number as arguments.');
-  process.exit(1); // Exit with an error code
+const server = http.createServer((req, res) => {
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
+  const { pathname, query } = url.parse(req.url, true);
+
+  if (pathname === '/isPrimeNumber' && req.method === 'GET') {
+    const { number } = query;
+
+    if (!number) {
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      res.end('Please provide a number as query parameter: number');
+      return;
+    }
+
+    const numberFromQueryParams = parseFloat(number);
+
+    if (isNaN(numberFromQueryParams)) {
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      res.end(`${number} is not a valid number.`);
+      return;
+    }
+
+    try {
+      const isPrimeNumber = isNumberPrime(numberFromQueryParams);
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end(isPrimeNumber);
+    } catch (err) {
+      res.write(500, { 'Content-Type': 'text/plain' });
+      res.end(err.message);
+    }
+  } else {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Not Found');
+  }
+}).on('error', err => {
+  console.error('Server error:', err.message);
+});
+
+process.on('uncaughtException', err => {
+  console.error(err.message);
+  process.exit(1);
+});
+
+const createServer = () => {
+  return server;
+};
+
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}/`);
+  });
 }
 
-const number = parseInt(args[0]);
-
-if (isNaN(number)) {
-  console.error('Argument must be a valid number.');
-  process.exit(1); // Exit with an error code
-}
-
-const result = isNumberPrime(number);
-
-console.log(result);
+module.exports = { createServer };
