@@ -8,7 +8,7 @@
     "test:dist": "jest test_dist",
     "build": "node build.js",
     "start": "node dist/index.js",
-    "lint": "eslint src/ test/ --fix"
+    "lint": "eslint src/ test_src/ test_dist --fix"
   },
   "author": "Zsombor Medgyesi",
   "license": "ISC",
