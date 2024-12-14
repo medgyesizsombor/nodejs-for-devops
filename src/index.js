@@ -8,9 +8,12 @@ const register = new promClient.Registry();
 
 promClient.collectDefaultMetrics({
   register,
-  prfix: 'mathapp_'
+  prfix: 'primenumber_'
 });
 
+/**
+ * Monitor the duration of the http requests
+ */
 const httpRequestDuration = new promClient.Histogram({
   name: 'http_request_duration_seconds',
   help: 'Duration of HTTP requests is seconds',
@@ -28,27 +31,27 @@ const httpRequestTotal = new promClient.Counter({
 });
 
 /**
- * Monitor errors
+ * Monitor the errors
  */
-const calculationErrors = new promClient.Counter({
-  name: 'calculation_errors_total',
-  help: 'Total number of calculation errors',
+const errorsTotal = new promClient.Counter({
+  name: 'errors_total',
+  help: 'Total number of errors',
   labelNames: ['error_type']
 });
 
 /**
- * Monitor number of the requests
+ * Monitor number of the correct requests
  */
-const calculationTotal = new promClient.Counter({
-  name: 'calculations_total',
-  help: 'Total number of calculations performed',
+const correctRequestsTotal = new promClient.Counter({
+  name: 'correct_requests',
+  help: 'Total number of the prime numbers performed',
 });
 
 // Register custom metrics
 register.registerMetric(httpRequestDuration);
 register.registerMetric(httpRequestTotal);
-register.registerMetric(calculationErrors);
-register.registerMetric(calculationTotal);
+register.registerMetric(errorsTotal);
+register.registerMetric(correctRequestsTotal);
 
 const PORT = process.env.PORT || 3000;
 
@@ -88,15 +91,13 @@ const server = http.createServer(async (req, res) => {
       endTimer(500);
       return;
     }
-  }
-
-  if (pathname === '/isPrimeNumber' && req.method === 'GET') {
+  } else if (pathname === '/isPrimeNumber' && req.method === 'GET') {
     const { number } = query;
 
     if (!number) {
       res.writeHead(400, { 'Content-Type': 'text/plain' });
       res.end('Please provide a number as query parameter: number');
-      calculationErrors.labels('missing_parameters').inc();
+      errorsTotal.labels('missing_parameter').inc();
       endTimer(400);
       return;
     }
@@ -106,7 +107,7 @@ const server = http.createServer(async (req, res) => {
     if (isNaN(numberFromQueryParams)) {
       res.writeHead(400, { 'Content-Type': 'text/plain' });
       res.end(`${number} is not a valid number.`);
-      calculationErrors.labels('invalid_parameter').inc();
+      errorsTotal.labels('invalid_number').inc();
       endTimer(400);
       return;
     }
@@ -115,19 +116,18 @@ const server = http.createServer(async (req, res) => {
       const isPrimeNumber = isNumberPrime(numberFromQueryParams);
       res.writeHead(200, { 'Content-Type': 'text/plain' });
       res.end(isPrimeNumber);
-      calculationTotal.inc();
+      correctRequestsTotal.inc();
       endTimer(200);
     } catch (err) {
       res.write(500, { 'Content-Type': 'text/plain' });
       res.end(err.message);
-      calculationErrors.labels('calculation_error').inc();
+      errorsTotal.labels('error').inc();
       endTimer(500);
     }
   } else {
-    console.log(pathname);
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     res.end('Not Found');
-    calculationErrors.labels('calculation_error').inc();
+    errorsTotal.labels('not_found').inc();
     endTimer(404);
   }
 }).on('error', err => {
